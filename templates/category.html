@@ -157,10 +157,30 @@
                                    class="btn btn-sm btn-outline-success" title="Download">
                                     <i class="fas fa-download"></i>
                                 </a>
-                                <button class="btn btn-sm btn-outline-danger" 
-                                        onclick="showDeleteModal('{{ category_path }}/{{ file.name }}')" title="Delete">
-                                    <i class="fas fa-trash"></i>
-                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                            data-bs-toggle="dropdown" title="More Actions">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <button class="dropdown-item" onclick="showMoveModal('{{ category_path }}/{{ file.name }}')">
+                                                <i class="fas fa-arrows-alt me-2"></i>Move File
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button class="dropdown-item" onclick="showCopyModal('{{ category_path }}/{{ file.name }}')">
+                                                <i class="fas fa-copy me-2"></i>Copy File
+                                            </button>
+                                        </li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li>
+                                            <button class="dropdown-item text-danger" onclick="showDeleteModal('{{ category_path }}/{{ file.name }}')">
+                                                <i class="fas fa-trash me-2"></i>Delete File
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -241,6 +261,115 @@
     </div>
 </div>
 
+<!-- Move File Modal -->
+<div class="modal fade" id="moveModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Move File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('move_file') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="moveSourcePath" name="source_path">
+                    
+                    <div class="mb-3">
+                        <label for="moveTargetCategory" class="form-label">Target Category</label>
+                        <input type="text" class="form-control" id="moveTargetCategory" name="target_category" 
+                               placeholder="Enter category name" required>
+                        <div class="form-text">Existing categories:</div>
+                        <div class="d-flex flex-wrap gap-1 mt-1" id="moveCategoryButtons">
+                            <!-- Categories will be loaded dynamically -->
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="moveTargetSubcategory" class="form-label">Target Subcategory (Optional)</label>
+                        <input type="text" class="form-control" id="moveTargetSubcategory" name="target_subcategory" 
+                               placeholder="Enter subcategory name">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Move File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Copy File Modal -->
+<div class="modal fade" id="copyModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Copy File</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('copy_file') }}">
+                <div class="modal-body">
+                    <input type="hidden" id="copySourcePath" name="source_path">
+                    
+                    <div class="mb-3">
+                        <label for="copyTargetCategory" class="form-label">Target Category</label>
+                        <input type="text" class="form-control" id="copyTargetCategory" name="target_category" 
+                               placeholder="Enter category name" required>
+                        <div class="form-text">Existing categories:</div>
+                        <div class="d-flex flex-wrap gap-1 mt-1" id="copyCategoryButtons">
+                            <!-- Categories will be loaded dynamically -->
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="copyTargetSubcategory" class="form-label">Target Subcategory (Optional)</label>
+                        <input type="text" class="form-control" id="copyTargetSubcategory" name="target_subcategory" 
+                               placeholder="Enter subcategory name">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Copy File</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('create_category') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="category_name" 
+                               placeholder="Enter category name" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="parentCategory" class="form-label">Parent Category (Optional)</label>
+                        <select class="form-select" id="parentCategory" name="parent_category">
+                            <option value="">None (Top-level category)</option>
+                            {% for cat_name in categories.keys() %}
+                                <option value="{{ cat_name }}">{{ cat_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <!-- Delete File Modal -->
 <div class="modal fade" id="deleteModal" tabindex="-1">
     <div class="modal-dialog">
@@ -289,6 +418,62 @@ function confirmDeleteCategory() {
         document.body.appendChild(form);
         form.submit();
     }
+}
+
+async function loadCategories() {
+    try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        return data.categories || [];
+    } catch (error) {
+        console.error('Error loading categories:', error);
+        return [];
+    }
+}
+
+function createCategoryButton(category, targetInputId) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'btn btn-outline-secondary btn-sm';
+    button.textContent = category;
+    button.onclick = () => {
+        document.getElementById(targetInputId).value = category;
+    };
+    return button;
+}
+
+async function showMoveModal(filePath) {
+    const modal = new bootstrap.Modal(document.getElementById('moveModal'));
+    const sourceInput = document.getElementById('moveSourcePath');
+    const buttonsContainer = document.getElementById('moveCategoryButtons');
+    
+    sourceInput.value = filePath;
+    
+    // Load and display categories
+    const categories = await loadCategories();
+    buttonsContainer.innerHTML = '';
+    categories.forEach(category => {
+        buttonsContainer.appendChild(createCategoryButton(category, 'moveTargetCategory'));
+    });
+    
+    modal.show();
+}
+
+async function showCopyModal(filePath) {
+    const modal = new bootstrap.Modal(document.getElementById('copyModal'));
+    const sourceInput = document.getElementById('copySourcePath');
+    const buttonsContainer = document.getElementById('copyCategoryButtons');
+    
+    sourceInput.value = filePath;
+    
+    // Load and display categories
+    const categories = await loadCategories();
+    buttonsContainer.innerHTML = '';
+    categories.forEach(category => {
+        buttonsContainer.appendChild(createCategoryButton(category, 'copyTargetCategory'));
+    });
+    
+    modal.show();
 }
 
 function showDeleteModal(filePath) {

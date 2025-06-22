@@ -541,6 +541,199 @@ def view_document(file_path):
         flash(f'Document viewing error: {str(e)}', 'error')
         return redirect(url_for('index'))
 
+@app.route('/move_file', methods=['POST'])
+def move_file():
+    """Move file to different category."""
+    try:
+        source_path = request.form.get('source_path', '').strip()
+        target_category = request.form.get('target_category', '').strip()
+        target_subcategory = request.form.get('target_subcategory', '').strip()
+        
+        if not source_path or not target_category:
+            flash('Missing required information for file move', 'error')
+            return redirect(url_for('index'))
+        
+        # Sanitize paths
+        target_category = secure_filename(target_category)
+        if target_subcategory:
+            target_subcategory = secure_filename(target_subcategory)
+        
+        source_full_path = os.path.join(UPLOAD_FOLDER, source_path)
+        
+        if not os.path.exists(source_full_path):
+            flash('Source file not found', 'error')
+            return redirect(url_for('index'))
+        
+        # Create target directory structure
+        if target_subcategory:
+            target_dir = os.path.join(UPLOAD_FOLDER, target_category, target_subcategory)
+            target_path = os.path.join(target_category, target_subcategory, os.path.basename(source_path))
+        else:
+            target_dir = os.path.join(UPLOAD_FOLDER, target_category)
+            target_path = os.path.join(target_category, os.path.basename(source_path))
+        
+        os.makedirs(target_dir, exist_ok=True)
+        
+        target_full_path = os.path.join(UPLOAD_FOLDER, target_path)
+        
+        # Handle duplicate filenames
+        counter = 1
+        base_name, extension = os.path.splitext(os.path.basename(source_path))
+        
+        while os.path.exists(target_full_path):
+            new_filename = f"{base_name}_{counter}{extension}"
+            if target_subcategory:
+                target_path = os.path.join(target_category, target_subcategory, new_filename)
+            else:
+                target_path = os.path.join(target_category, new_filename)
+            target_full_path = os.path.join(UPLOAD_FOLDER, target_path)
+            counter += 1
+        
+        # Move the file
+        import shutil
+        shutil.move(source_full_path, target_full_path)
+        
+        # Clean up empty directories
+        source_dir = os.path.dirname(source_full_path)
+        try:
+            if not os.listdir(source_dir):
+                os.rmdir(source_dir)
+        except:
+            pass
+        
+        target_display = f"{target_category}"
+        if target_subcategory:
+            target_display += f"/{target_subcategory}"
+        
+        flash(f'File moved to {target_display} successfully', 'success')
+        
+        # Redirect to target category
+        if target_subcategory:
+            return redirect(url_for('show_category', category_path=f"{target_category}/{target_subcategory}"))
+        else:
+            return redirect(url_for('show_category', category_path=target_category))
+    
+    except Exception as e:
+        logger.error(f"Error moving file {source_path}: {str(e)}")
+        flash(f'Move error: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/copy_file', methods=['POST'])
+def copy_file():
+    """Copy file to different category."""
+    try:
+        source_path = request.form.get('source_path', '').strip()
+        target_category = request.form.get('target_category', '').strip()
+        target_subcategory = request.form.get('target_subcategory', '').strip()
+        
+        if not source_path or not target_category:
+            flash('Missing required information for file copy', 'error')
+            return redirect(url_for('index'))
+        
+        # Sanitize paths
+        target_category = secure_filename(target_category)
+        if target_subcategory:
+            target_subcategory = secure_filename(target_subcategory)
+        
+        source_full_path = os.path.join(UPLOAD_FOLDER, source_path)
+        
+        if not os.path.exists(source_full_path):
+            flash('Source file not found', 'error')
+            return redirect(url_for('index'))
+        
+        # Create target directory structure
+        if target_subcategory:
+            target_dir = os.path.join(UPLOAD_FOLDER, target_category, target_subcategory)
+            target_path = os.path.join(target_category, target_subcategory, os.path.basename(source_path))
+        else:
+            target_dir = os.path.join(UPLOAD_FOLDER, target_category)
+            target_path = os.path.join(target_category, os.path.basename(source_path))
+        
+        os.makedirs(target_dir, exist_ok=True)
+        
+        target_full_path = os.path.join(UPLOAD_FOLDER, target_path)
+        
+        # Handle duplicate filenames
+        counter = 1
+        base_name, extension = os.path.splitext(os.path.basename(source_path))
+        
+        while os.path.exists(target_full_path):
+            new_filename = f"{base_name}_copy_{counter}{extension}"
+            if target_subcategory:
+                target_path = os.path.join(target_category, target_subcategory, new_filename)
+            else:
+                target_path = os.path.join(target_category, new_filename)
+            target_full_path = os.path.join(UPLOAD_FOLDER, target_path)
+            counter += 1
+        
+        # Copy the file
+        import shutil
+        shutil.copy2(source_full_path, target_full_path)
+        
+        target_display = f"{target_category}"
+        if target_subcategory:
+            target_display += f"/{target_subcategory}"
+        
+        flash(f'File copied to {target_display} successfully', 'success')
+        
+        # Redirect to target category
+        if target_subcategory:
+            return redirect(url_for('show_category', category_path=f"{target_category}/{target_subcategory}"))
+        else:
+            return redirect(url_for('show_category', category_path=target_category))
+    
+    except Exception as e:
+        logger.error(f"Error copying file {source_path}: {str(e)}")
+        flash(f'Copy error: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
+@app.route('/api/categories')
+def api_categories():
+    """API endpoint to get all categories."""
+    try:
+        categories = get_categories()
+        category_list = list(categories.keys())
+        return jsonify({'categories': category_list})
+    except Exception as e:
+        logger.error(f"Error getting categories via API: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/create_category', methods=['POST'])
+def create_category():
+    """Create new category or subcategory."""
+    try:
+        category_name = request.form.get('category_name', '').strip()
+        parent_category = request.form.get('parent_category', '').strip()
+        
+        if not category_name:
+            flash('Category name is required', 'error')
+            return redirect(url_for('index'))
+        
+        # Sanitize category name
+        category_name = secure_filename(category_name)
+        
+        if parent_category:
+            parent_category = secure_filename(parent_category)
+            full_path = os.path.join(UPLOAD_FOLDER, parent_category, category_name)
+            category_path = f"{parent_category}/{category_name}"
+        else:
+            full_path = os.path.join(UPLOAD_FOLDER, category_name)
+            category_path = category_name
+        
+        if os.path.exists(full_path):
+            flash('Category already exists', 'error')
+            return redirect(url_for('index'))
+        
+        os.makedirs(full_path, exist_ok=True)
+        flash(f'Category "{category_path}" created successfully', 'success')
+        
+        return redirect(url_for('show_category', category_path=category_path))
+    
+    except Exception as e:
+        logger.error(f"Error creating category: {str(e)}")
+        flash(f'Category creation error: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
 @app.route('/delete/<path:file_path>', methods=['POST'])
 def delete_file(file_path):
     """Delete a specific file."""
@@ -553,6 +746,14 @@ def delete_file(file_path):
         
         os.remove(full_path)
         flash(f'File "{os.path.basename(file_path)}" deleted successfully', 'success')
+        
+        # Clean up empty directories
+        source_dir = os.path.dirname(full_path)
+        try:
+            if not os.listdir(source_dir):
+                os.rmdir(source_dir)
+        except:
+            pass
         
         # Redirect to category if we know it
         category_path = '/'.join(file_path.split('/')[:-1])
