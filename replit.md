@@ -9,7 +9,8 @@ This is a professional file hosting service built with Flask that allows users t
 The application follows a traditional Flask web application architecture with the following components:
 
 - **Frontend**: Server-side rendered HTML templates using Jinja2 with Bootstrap 5 styling and custom CSS/JavaScript
-- **Backend**: Flask web framework with file system-based storage
+- **Backend**: Flask web framework with PostgreSQL database integration using Flask-SQLAlchemy
+- **Database**: PostgreSQL database for tracking files, categories, and upload sessions with automatic fallback to SQLite
 - **File Storage**: Local file system organized by categories and subcategories in `static/uploads/`
 - **Document Processing**: Multiple specialized libraries for viewing different document types
 - **Deployment**: Gunicorn WSGI server with autoscale deployment target on Replit
@@ -60,9 +61,11 @@ The application follows a traditional Flask web application architecture with th
 
 ### Python Libraries
 - **Flask**: Core web framework for request handling and templating
+- **Flask-SQLAlchemy**: Database ORM for PostgreSQL integration and file metadata management
 - **Flask-CORS**: Cross-origin resource sharing support for API endpoints
 - **Werkzeug**: WSGI utilities for secure file handling and HTTP utilities
 - **Gunicorn**: Production WSGI server for deployment
+- **psycopg2-binary**: PostgreSQL database adapter for Python
 - **PyMuPDF (fitz)**: PDF processing and text extraction (optional)
 - **python-docx**: Microsoft Word document processing (optional)
 - **openpyxl**: Excel file processing and data extraction (optional)
@@ -101,9 +104,46 @@ The application follows a traditional Flask web application architecture with th
 - **File size limits** to prevent storage abuse
 - **Security measures** including filename sanitization and MIME type validation
 
+## Database Schema
+
+### Categories Table
+- **id**: Primary key
+- **name**: Category name
+- **path**: Full category path for file system organization
+- **parent_id**: Foreign key to parent category (for subcategories)
+- **created_at**: Category creation timestamp
+
+### Files Table
+- **id**: Primary key
+- **filename**: Secure filename used for storage
+- **original_filename**: Original filename from upload
+- **file_path**: Full file system path
+- **file_size**: File size in bytes
+- **file_type**: File type category (images, documents, etc.)
+- **mime_type**: MIME type for proper browser handling
+- **category_id**: Foreign key to categories table
+- **upload_date**: File upload timestamp
+- **last_accessed**: Last access timestamp
+- **download_count**: Number of times downloaded
+
+### Upload Sessions Table
+- **id**: Primary key
+- **session_id**: Unique session identifier
+- **total_files**: Number of files in upload batch
+- **successful_uploads**: Number of successful uploads
+- **failed_uploads**: Number of failed uploads
+- **total_size**: Total size of uploaded files
+- **start_time**: Upload session start time
+- **end_time**: Upload session completion time
+- **ip_address**: Client IP address
+- **user_agent**: Client browser information
+
 ## Changelog
 
-- June 22, 2025. Initial setup
+- June 22, 2025: Initial setup with file system-based storage
+- June 22, 2025: Added PostgreSQL database integration with Flask-SQLAlchemy
+- June 22, 2025: Implemented database-driven category and file management
+- June 22, 2025: Added upload session tracking and file metadata storage
 
 ## User Preferences
 
