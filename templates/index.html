@@ -1,0 +1,341 @@
+{% extends "base.html" %}
+
+{% block title %}Home - File Hosting Service{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">
+            <i class="fas fa-cloud-upload-alt text-primary me-3"></i>
+            Professional File Hosting
+        </h1>
+        <p class="lead text-muted">Upload, organize, and manage your files with ease</p>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section mb-5">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-upload me-2"></i>Upload Files
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('upload_files') }}" enctype="multipart/form-data" id="uploadForm">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="files" class="form-label">Select Files</label>
+                            <input type="file" class="form-control" id="files" name="files" multiple required>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Supported: Images, Documents (PDF, Word, Excel, PowerPoint, Text), Archives, Videos, Audio. Max size: 10GB per file.
+                            </div>
+                            <div class="progress mt-2" id="uploadProgress" style="display: none;">
+                                <div class="progress-bar" role="progressbar" style="width: 0%"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="category" class="form-label">Category</label>
+                            <input type="text" class="form-control" id="category" name="category" 
+                                   placeholder="Enter category name" value="general" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="subcategory" class="form-label">Subcategory (Optional)</label>
+                            <input type="text" class="form-control" id="subcategory" name="subcategory" 
+                                   placeholder="Enter subcategory name">
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary btn-lg" id="uploadBtn">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>Upload Files
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management -->
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <!-- Categories -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-folder me-2"></i>Categories
+                    </h3>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                        <i class="fas fa-plus me-1"></i>New Category
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <div class="row">
+                            {% for category_name, category_data in categories.items() %}
+                            <div class="col-lg-6 col-md-12 mb-3">
+                                <div class="category-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="{{ url_for('show_category', category_path=category_name) }}" 
+                                           class="category-link">
+                                            <i class="fas fa-folder text-warning me-2"></i>
+                                            <strong>{{ category_name }}</strong>
+                                            <span class="badge bg-secondary ms-2">{{ category_data.files|length }} files</span>
+                                        </a>
+                                        
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ url_for('download_category', category_path=category_name) }}">
+                                                        <i class="fas fa-download me-2"></i>Download ZIP
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form method="post" action="{{ url_for('delete_category', category_path=category_name) }}" 
+                                                          onsubmit="return confirm('Delete category {{ category_name }} and all its contents?')">
+                                                        <button type="submit" class="dropdown-item text-danger">
+                                                            <i class="fas fa-trash me-2"></i>Delete Category
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if category_data.subcategories %}
+                                    <div class="subcategories mt-2 ms-3">
+                                        {% for subcategory_name, subcategory_data in category_data.subcategories.items() %}
+                                        <div class="subcategory-item">
+                                            <a href="{{ url_for('show_category', category_path=category_name + '/' + subcategory_name) }}" 
+                                               class="subcategory-link">
+                                                <i class="fas fa-folder-open text-info me-1"></i>
+                                                {{ subcategory_name }}
+                                                <span class="badge bg-info ms-1">{{ subcategory_data.files|length }}</span>
+                                            </a>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-folder-open text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No categories yet. Upload your first files to get started!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ categories|length }}</div>
+                                <div class="stat-label">Categories</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ recent_files|length }}</div>
+                                <div class="stat-label">Recent Files</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Files -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-clock me-2"></i>Recent Uploads
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if recent_files %}
+                <div class="row">
+                    {% for file in recent_files %}
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
+                        <div class="file-card">
+                            {% if file.type == 'images' %}
+                                <div class="file-preview">
+                                    <img src="{{ url_for('static', filename='uploads/' + file.path) }}" 
+                                         class="file-thumbnail" alt="{{ file.name }}"
+                                         data-bs-toggle="modal" data-bs-target="#imageModal"
+                                         onclick="showImage('{{ url_for('static', filename='uploads/' + file.path) }}', '{{ file.name }}')">
+                                </div>
+                            {% else %}
+                                <div class="file-preview document-preview">
+                                    {% if file.type == 'documents' %}
+                                        {% if file.name.endswith('.pdf') %}
+                                            <i class="fas fa-file-pdf text-danger"></i>
+                                        {% elif file.name.endswith(('.doc', '.docx')) %}
+                                            <i class="fas fa-file-word text-primary"></i>
+                                        {% elif file.name.endswith(('.xls', '.xlsx')) %}
+                                            <i class="fas fa-file-excel text-success"></i>
+                                        {% elif file.name.endswith(('.ppt', '.pptx')) %}
+                                            <i class="fas fa-file-powerpoint text-warning"></i>
+                                        {% elif file.name.endswith('.txt') %}
+                                            <i class="fas fa-file-alt text-secondary"></i>
+                                        {% else %}
+                                            <i class="fas fa-file text-secondary"></i>
+                                        {% endif %}
+                                    {% elif file.type == 'videos' %}
+                                        <i class="fas fa-file-video text-warning"></i>
+                                    {% elif file.type == 'audio' %}
+                                        <i class="fas fa-file-audio text-info"></i>
+                                    {% elif file.type == 'archives' %}
+                                        <i class="fas fa-file-archive text-dark"></i>
+                                    {% else %}
+                                        <i class="fas fa-file text-secondary"></i>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="file-info">
+                                <div class="file-name" title="{{ file.name }}">{{ file.name[:20] }}{% if file.name|length > 20 %}...{% endif %}</div>
+                                <div class="file-meta">
+                                    <small class="text-muted">
+                                        <a href="{{ url_for('show_category', category_path=file.category + ('/' + file.subcategory if file.subcategory else '')) }}" 
+                                           class="category-tag">
+                                            {{ file.category }}{% if file.subcategory %}/{{ file.subcategory }}{% endif %}
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="file-actions">
+                                {% if file.type == 'documents' %}
+                                    <a href="{{ url_for('view_document', file_path=file.path) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('download_file', file_path=file.path) }}" 
+                                   class="btn btn-sm btn-outline-success" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-clock text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3">No files uploaded yet. Start by uploading your first files!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Image Viewer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <div class="image-container">
+                    <img id="modalImage" src="" alt="" class="modal-image">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(-90)">
+                    <i class="fas fa-undo me-1"></i>Rotate Left
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(90)">
+                    <i class="fas fa-redo me-1"></i>Rotate Right
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="zoomImage(0.8)">
+                    <i class="fas fa-search-minus me-1"></i>Zoom Out
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="zoomImage(1.25)">
+                    <i class="fas fa-search-plus me-1"></i>Zoom In
+                </button>
+                <button type="button" class="btn btn-primary" onclick="resetImage()">
+                    <i class="fas fa-expand me-1"></i>Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// File upload progress tracking
+document.getElementById('uploadForm').addEventListener('submit', function(e) {
+    const files = document.getElementById('files').files;
+    if (files.length > 0) {
+        const uploadBtn = document.getElementById('uploadBtn');
+        const progress = document.getElementById('uploadProgress');
+        
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Uploading...';
+        progress.style.display = 'block';
+        
+        // Simulate progress for large files
+        let progressValue = 0;
+        const progressInterval = setInterval(() => {
+            progressValue += Math.random() * 15;
+            if (progressValue >= 90) {
+                clearInterval(progressInterval);
+                progressValue = 90;
+            }
+            progress.querySelector('.progress-bar').style.width = progressValue + '%';
+        }, 500);
+    }
+});
+
+// File size validation
+document.getElementById('files').addEventListener('change', function(e) {
+    const files = e.target.files;
+    const maxSize = 10 * 1024 * 1024 * 1024; // 10GB
+    let totalSize = 0;
+    
+    for (let i = 0; i < files.length; i++) {
+        if (files[i].size > maxSize) {
+            alert(`File "${files[i].name}" is too large. Maximum size is 10GB per file.`);
+            e.target.value = '';
+            return;
+        }
+        totalSize += files[i].size;
+    }
+    
+    // Update file count display
+    const formText = e.target.nextElementSibling;
+    if (files.length > 0) {
+        const sizeText = totalSize > 1024 * 1024 * 1024 ? 
+            `${(totalSize / (1024 * 1024 * 1024)).toFixed(1)}GB` :
+            `${(totalSize / (1024 * 1024)).toFixed(1)}MB`;
+        formText.innerHTML = `<i class="fas fa-check-circle text-success me-1"></i>${files.length} file(s) selected (${sizeText})`;
+    }
+});
+</script>
+{% endblock %}
