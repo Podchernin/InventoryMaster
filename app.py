@@ -434,7 +434,8 @@ def show_category(category_path):
                              category_path=category_path,
                              breadcrumbs=breadcrumbs,
                              files=files,
-                             subcategories=subcategories)
+                             subcategories=subcategories,
+                             categories=get_categories())
     
     except Exception as e:
         logger.error(f"Error showing category {category_path}: {str(e)}")
