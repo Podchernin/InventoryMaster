@@ -1,0 +1,403 @@
+{% extends "base.html" %}
+
+{% block title %}Home - File Hosting Service{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="text-center mb-5">
+        <h1 class="display-4 mb-3">
+            <i class="fas fa-cloud-upload-alt text-primary me-3"></i>
+            Professional File Hosting
+        </h1>
+        <p class="lead text-muted">Upload, organize, and manage your files with ease</p>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section mb-5">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title mb-0">
+                    <i class="fas fa-upload me-2"></i>Upload Files
+                </h3>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{{ url_for('upload_files') }}" enctype="multipart/form-data">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="files" class="form-label">Select Files</label>
+                            <input type="file" class="form-control" id="files" name="files" multiple required>
+                            <div class="form-text">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Supported: Images, Documents (PDF, Word, Excel, PowerPoint, Text), Archives, Videos, Audio
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="category" class="form-label">Category</label>
+                            <input type="text" class="form-control" id="category" name="category" 
+                                   placeholder="Enter category name" value="general" required>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <label for="subcategory" class="form-label">Subcategory (Optional)</label>
+                            <input type="text" class="form-control" id="subcategory" name="subcategory" 
+                                   placeholder="Enter subcategory name">
+                        </div>
+                        
+                        <div class="col-12">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>Upload Files
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Management -->
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <!-- Categories -->
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3 class="card-title mb-0">
+                        <i class="fas fa-folder me-2"></i>Categories
+                    </h3>
+                    <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createCategoryModal">
+                        <i class="fas fa-plus me-1"></i>New Category
+                    </button>
+                </div>
+                <div class="card-body">
+                    {% if categories %}
+                        <div class="row">
+                            {% for category_name, category_data in categories.items() %}
+                            <div class="col-lg-6 col-md-12 mb-3">
+                                <div class="category-item">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <a href="{{ url_for('show_category', category_path=category_name) }}" 
+                                           class="category-link">
+                                            <i class="fas fa-folder text-warning me-2"></i>
+                                            <strong>{{ category_name }}</strong>
+                                            <span class="badge bg-secondary ms-2">{{ category_data.files|length }} files</span>
+                                        </a>
+                                        
+                                        <div class="dropdown">
+                                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                    data-bs-toggle="dropdown">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu">
+                                                <li>
+                                                    <a class="dropdown-item" href="{{ url_for('download_category', category_path=category_name) }}">
+                                                        <i class="fas fa-download me-2"></i>Download ZIP
+                                                    </a>
+                                                </li>
+                                                <li><hr class="dropdown-divider"></li>
+                                                <li>
+                                                    <form method="post" action="{{ url_for('delete_category', category_path=category_name) }}" 
+                                                          onsubmit="return confirm('Delete category {{ category_name }} and all its contents?')">
+                                                        <button type="submit" class="dropdown-item text-danger">
+                                                            <i class="fas fa-trash me-2"></i>Delete Category
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                    
+                                    {% if category_data.subcategories %}
+                                    <div class="subcategories mt-2 ms-3">
+                                        {% for subcategory_name, subcategory_data in category_data.subcategories.items() %}
+                                        <div class="subcategory-item">
+                                            <a href="{{ url_for('show_category', category_path=category_name + '/' + subcategory_name) }}" 
+                                               class="subcategory-link">
+                                                <i class="fas fa-folder-open text-info me-1"></i>
+                                                {{ subcategory_name }}
+                                                <span class="badge bg-info ms-1">{{ subcategory_data.files|length }}</span>
+                                            </a>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i class="fas fa-folder-open text-muted" style="font-size: 3rem;"></i>
+                            <p class="text-muted mt-3">No categories yet. Upload your first files to get started!</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <!-- Quick Stats -->
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-chart-bar me-2"></i>Quick Stats
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ categories|length }}</div>
+                                <div class="stat-label">Categories</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="stat-item">
+                                <div class="stat-number">{{ recent_files|length }}</div>
+                                <div class="stat-label">Recent Files</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Files -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title mb-0">
+                <i class="fas fa-clock me-2"></i>Recent Uploads
+            </h3>
+        </div>
+        <div class="card-body">
+            {% if recent_files %}
+                <div class="row">
+                    {% for file in recent_files %}
+                    <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6 mb-4">
+                        <div class="file-card">
+                            {% if file.type == 'images' %}
+                                <div class="file-preview">
+                                    <img src="{{ url_for('static', filename='uploads/' + file.path) }}" 
+                                         class="file-thumbnail" alt="{{ file.name }}"
+                                         data-bs-toggle="modal" data-bs-target="#imageModal"
+                                         onclick="showImage('{{ url_for('static', filename='uploads/' + file.path) }}', '{{ file.name }}')">
+                                </div>
+                            {% else %}
+                                <div class="file-preview document-preview">
+                                    {% if file.type == 'documents' %}
+                                        {% if file.name.endswith('.pdf') %}
+                                            <i class="fas fa-file-pdf text-danger"></i>
+                                        {% elif file.name.endswith(('.doc', '.docx')) %}
+                                            <i class="fas fa-file-word text-primary"></i>
+                                        {% elif file.name.endswith(('.xls', '.xlsx')) %}
+                                            <i class="fas fa-file-excel text-success"></i>
+                                        {% elif file.name.endswith(('.ppt', '.pptx')) %}
+                                            <i class="fas fa-file-powerpoint text-warning"></i>
+                                        {% elif file.name.endswith('.txt') %}
+                                            <i class="fas fa-file-alt text-secondary"></i>
+                                        {% else %}
+                                            <i class="fas fa-file text-secondary"></i>
+                                        {% endif %}
+                                    {% elif file.type == 'videos' %}
+                                        <i class="fas fa-file-video text-warning"></i>
+                                    {% elif file.type == 'audio' %}
+                                        <i class="fas fa-file-audio text-info"></i>
+                                    {% elif file.type == 'archives' %}
+                                        <i class="fas fa-file-archive text-dark"></i>
+                                    {% else %}
+                                        <i class="fas fa-file text-secondary"></i>
+                                    {% endif %}
+                                </div>
+                            {% endif %}
+                            
+                            <div class="file-info">
+                                <div class="file-name" title="{{ file.name }}">{{ file.name[:20] }}{% if file.name|length > 20 %}...{% endif %}</div>
+                                <div class="file-meta">
+                                    <small class="text-muted">
+                                        <a href="{{ url_for('show_category', category_path=file.category + ('/' + file.subcategory if file.subcategory else '')) }}" 
+                                           class="category-tag">
+                                            {{ file.category }}{% if file.subcategory %}/{{ file.subcategory }}{% endif %}
+                                        </a>
+                                    </small>
+                                </div>
+                            </div>
+                            
+                            <div class="file-actions">
+                                {% if file.type == 'documents' %}
+                                    <a href="{{ url_for('view_document', file_path=file.path) }}" 
+                                       class="btn btn-sm btn-outline-primary" title="View">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                {% endif %}
+                                <a href="{{ url_for('download_file', file_path=file.path) }}" 
+                                   class="btn btn-sm btn-outline-success" title="Download">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                                <button class="btn btn-sm btn-outline-secondary" 
+                                        onclick="showFileOptions('{{ file.path }}')" title="More">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-file-upload text-muted" style="font-size: 3rem;"></i>
+                    <p class="text-muted mt-3">No files uploaded yet. Start by uploading your first files!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Create Category Modal -->
+<div class="modal fade" id="createCategoryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('create_category') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="categoryName" class="form-label">Category Name</label>
+                        <input type="text" class="form-control" id="categoryName" name="category_name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="parentCategory" class="form-label">Parent Category (Optional)</label>
+                        <select class="form-select" id="parentCategory" name="parent_category">
+                            <option value="">-- Create as top-level category --</option>
+                            {% for category_name in categories.keys() %}
+                            <option value="{{ category_name }}">{{ category_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Category</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Image Modal -->
+<div class="modal fade" id="imageModal" tabindex="-1">
+    <div class="modal-dialog modal-fullscreen">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="imageModalTitle">Image Viewer</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-0">
+                <div class="image-container">
+                    <img id="modalImage" src="" alt="" class="modal-image">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(-90)">
+                    <i class="fas fa-undo me-1"></i>Rotate Left
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="rotateImage(90)">
+                    Rotate Right<i class="fas fa-redo ms-1"></i>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="zoomImage(0.8)">
+                    <i class="fas fa-search-minus me-1"></i>Zoom Out
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="zoomImage(1.2)">
+                    <i class="fas fa-search-plus me-1"></i>Zoom In
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetImage()">
+                    <i class="fas fa-sync me-1"></i>Reset
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- File Options Modal -->
+<div class="modal fade" id="fileOptionsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">File Operations</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="showMoveModal()">
+                        <i class="fas fa-arrows-alt me-2"></i>Move to Category
+                    </button>
+                    <button class="btn btn-outline-info" onclick="showCopyModal()">
+                        <i class="fas fa-copy me-2"></i>Copy to Category
+                    </button>
+                    <hr>
+                    <button class="btn btn-outline-danger" onclick="showDeleteModal()">
+                        <i class="fas fa-trash me-2"></i>Delete File
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let currentFilePath = '';
+let currentRotation = 0;
+let currentZoom = 1;
+
+function showImage(imageSrc, imageName) {
+    document.getElementById('modalImage').src = imageSrc;
+    document.getElementById('imageModalTitle').textContent = imageName;
+    resetImage();
+}
+
+function showFileOptions(filePath) {
+    currentFilePath = filePath;
+    const modal = new bootstrap.Modal(document.getElementById('fileOptionsModal'));
+    modal.show();
+}
+
+function rotateImage(degrees) {
+    currentRotation += degrees;
+    updateImageTransform();
+}
+
+function zoomImage(factor) {
+    currentZoom = Math.max(0.5, Math.min(3, currentZoom * factor));
+    updateImageTransform();
+}
+
+function resetImage() {
+    currentRotation = 0;
+    currentZoom = 1;
+    updateImageTransform();
+}
+
+function updateImageTransform() {
+    const img = document.getElementById('modalImage');
+    img.style.transform = `rotate(${currentRotation}deg) scale(${currentZoom})`;
+}
+
+function showMoveModal() {
+    // Implementation for move modal
+    // This would show a modal with category selection for moving files
+}
+
+function showCopyModal() {
+    // Implementation for copy modal
+    // This would show a modal with category selection for copying files
+}
+
+function showDeleteModal() {
+    // Implementation for delete confirmation modal
+}
+</script>
+{% endblock %}
