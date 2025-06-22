@@ -3,18 +3,12 @@ import json
 import zipfile
 import mimetypes
 import logging
-import uuid
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
-from flask import Flask, request, redirect, url_for, render_template, flash, send_file, jsonify, abort, session
+from flask import Flask, request, redirect, url_for, render_template, flash, send_file, jsonify, abort
 from flask_cors import CORS
-from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import DeclarativeBase
-
-class Base(DeclarativeBase):
-    pass
 
 # Document processing imports with proper error handling
 try:
@@ -53,27 +47,8 @@ except ImportError:
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
-# Database setup
-db = SQLAlchemy(model_class=Base)
-
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default-secret-key-change-in-production")
-
-# Configure database
-database_url = os.environ.get("DATABASE_URL")
-if database_url:
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_recycle": 300,
-        "pool_pre_ping": True,
-    }
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    db.init_app(app)
-else:
-    # Fallback to SQLite for development
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///file_hosting.db"
-    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-    db.init_app(app)
 CORS(app)
 
 # Configuration
@@ -92,15 +67,6 @@ app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
 
 # Ensure upload directory exists
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-# Import models and create database tables
-with app.app_context():
-    from models import Category, File, UploadSession
-    try:
-        db.create_all()
-    except Exception as e:
-        logger.error(f"Error creating database tables: {e}")
-        # Fallback to file-system only mode if database fails
 
 def get_file_type(filename):
     """Determine file type based on extension."""
@@ -224,105 +190,59 @@ def extract_text_from_file(file_path):
         return f"Error processing file: {str(e)}"
 
 def get_categories():
-    """Get all categories and their structure from database with file-system fallback."""
+    """Get all categories and their structure."""
+    categories = {}
+    
     try:
-        # Try database approach first
-        with app.app_context():
-            from models import Category, File
+        if not os.path.exists(UPLOAD_FOLDER):
+            return categories
+        
+        for item in os.listdir(UPLOAD_FOLDER):
+            item_path = os.path.join(UPLOAD_FOLDER, item)
             
-            categories = {}
-            top_level_categories = Category.query.filter_by(parent_id=None).all()
-            
-            for category in top_level_categories:
-                file_count = File.query.filter_by(category_id=category.id).count()
-                categories[category.name] = {
-                    'count': file_count,
-                    'subcategories': []
+            if os.path.isdir(item_path):
+                categories[item] = {
+                    'files': [],
+                    'subcategories': {}
                 }
                 
-                for subcategory in category.subcategories:
-                    subfile_count = File.query.filter_by(category_id=subcategory.id).count()
-                    categories[category.name]['subcategories'].append({
-                        'name': subcategory.name,
-                        'count': subfile_count
-                    })
-            
-            return categories
-    
-    except Exception as e:
-        logger.error(f"Database error, falling back to file system: {str(e)}")
-        # Fallback to file system approach
-        categories = {}
-        
-        if os.path.exists(UPLOAD_FOLDER):
-            for item in os.listdir(UPLOAD_FOLDER):
-                item_path = os.path.join(UPLOAD_FOLDER, item)
-                if os.path.isdir(item_path):
-                    file_count = sum(1 for f in os.listdir(item_path) if os.path.isfile(os.path.join(item_path, f)))
-                    categories[item] = {'count': file_count, 'subcategories': []}
+                # Get files in category
+                for file_item in os.listdir(item_path):
+                    file_path = os.path.join(item_path, file_item)
                     
-                    for subitem in os.listdir(item_path):
-                        subitem_path = os.path.join(item_path, subitem)
-                        if os.path.isdir(subitem_path):
-                            subfile_count = sum(1 for f in os.listdir(subitem_path) if os.path.isfile(os.path.join(subitem_path, f)))
-                            categories[item]['subcategories'].append({
-                                'name': subitem,
-                                'count': subfile_count
-                            })
-        
-        return categories
-
-def get_or_create_category(category_name, parent_name=None):
-    """Get or create a category in the database with file-system fallback."""
-    try:
-        with app.app_context():
-            from models import Category
-            
-            parent_category = None
-            if parent_name:
-                parent_category = Category.query.filter_by(name=parent_name, parent_id=None).first()
-                if not parent_category:
-                    parent_category = Category(name=parent_name, path=parent_name)
-                    db.session.add(parent_category)
-                    db.session.commit()
-            
-            category_path = f"{parent_category.path}/{category_name}" if parent_category else category_name
-            
-            if parent_category:
-                category = Category.query.filter_by(name=category_name, parent_id=parent_category.id).first()
-            else:
-                category = Category.query.filter_by(name=category_name, parent_id=None).first()
-            
-            if not category:
-                category = Category(
-                    name=category_name,
-                    path=category_path,
-                    parent_id=parent_category.id if parent_category else None
-                )
-                db.session.add(category)
-                db.session.commit()
-            
-            # Ensure physical directory exists
-            full_path = os.path.join(UPLOAD_FOLDER, category_path)
-            os.makedirs(full_path, exist_ok=True)
-            
-            return category
+                    if os.path.isfile(file_path):
+                        file_info = {
+                            'name': file_item,
+                            'type': get_file_type(file_item),
+                            'size': os.path.getsize(file_path),
+                            'modified': os.path.getmtime(file_path)
+                        }
+                        categories[item]['files'].append(file_info)
+                    
+                    elif os.path.isdir(file_path):
+                        # Handle subcategories
+                        subcategory_files = []
+                        for sub_file in os.listdir(file_path):
+                            sub_file_path = os.path.join(file_path, sub_file)
+                            if os.path.isfile(sub_file_path):
+                                file_info = {
+                                    'name': sub_file,
+                                    'type': get_file_type(sub_file), 
+                                    'size': os.path.getsize(sub_file_path),
+                                    'modified': os.path.getmtime(sub_file_path)
+                                }
+                                subcategory_files.append(file_info)
+                        
+                        categories[item]['subcategories'][file_item] = {
+                            'files': subcategory_files
+                        }
     
     except Exception as e:
-        logger.error(f"Database error creating category, using file system: {str(e)}")
-        # Create directory structure directly
-        category_path = f"{parent_name}/{category_name}" if parent_name else category_name
-        full_path = os.path.join(UPLOAD_FOLDER, category_path)
-        os.makedirs(full_path, exist_ok=True)
-        
-        # Return a mock category object for compatibility
-        class MockCategory:
-            def __init__(self, name, path):
-                self.name = name
-                self.path = path
-                self.id = None
-        
-        return MockCategory(category_name, category_path)
+        logger.error(f"Error getting categories: {str(e)}")
+    
+    return categories
+
+
 
 def get_recent_files(limit=12):
     """Get recently uploaded files."""
