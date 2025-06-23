@@ -2,3 +2,4 @@ python-docx
 flask
 gunicorn
 flask-cors
+Path
