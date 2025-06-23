@@ -4,3 +4,9 @@ gunicorn
 flask-cors
 Path
 subprocess
+libreoffice
+PyMuPDF
+Pillow
+markdown
+lxml
+gunicorn
