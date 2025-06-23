@@ -1,12 +1,9 @@
 python-docx
-flask
+Flask
 gunicorn
-flask-cors
+Flask-cors
 Path
-subprocess
-libreoffice
 PyMuPDF
 Pillow
 markdown
 lxml
-gunicorn
