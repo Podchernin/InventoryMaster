@@ -135,7 +135,6 @@ def extract_text_from_file(file_path):
         except Exception as e:
             logger.error(f"Error processing Word document {file_path}: {str(e)}")
             return f"Error reading Word document: {str(e)}"
-
         
         # Handle Excel files
         elif file_extension in ['.xls', '.xlsx'] and EXCEL_AVAILABLE:
