@@ -119,7 +119,7 @@ def extract_text_from_file(file_path):
         # Handle Word documents
         elif file_extension in ['.doc', '.docx'] and DOCX_AVAILABLE:
             try:
-                if file_extension == ['.doc', '.docx']:
+                if file_extension in ['.doc', '.docx']:
                     pdf_path = file_path.rsplit('.', 1)[0] + '.pdf'
                     if not os.path.exists(pdf_path):
                         subprocess.run([
@@ -131,12 +131,11 @@ def extract_text_from_file(file_path):
                             os.path.dirname(file_path),
                             file_path
                         ], check=True)
-                    from pathlib import Path
                     return f'''
                     <iframe src="/static/uploads/{Path(pdf_path).name}" width="100%" height="800px" style="border:none;"></iframe>
                     '''
                 else:
-                    return "Предпросмотр .doc не поддерживается, только .docx."
+                    return "Предпросмотр .doc/.docx не поддерживается."
             except Exception as e:
                 logger.error(f"Ошибка при обработке DOCX: {e}")
                 return f"Ошибка чтения Word-документа: {e}"
