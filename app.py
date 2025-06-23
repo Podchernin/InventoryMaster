@@ -118,18 +118,30 @@ def extract_text_from_file(file_path):
         
         # Handle Word documents
         elif file_extension in ['.doc', '.docx'] and DOCX_AVAILABLE:
-            try:
-                if file_extension == '.docx':
-                    doc = Document(file_path)
-                    text = []
-                    for paragraph in doc.paragraphs:
-                        text.append(paragraph.text)
-                    return '\n'.join(text)
-                else:
-                    return "Preview not available for .doc files. Please download to view."
-            except Exception as e:
-                logger.error(f"Error processing Word document {file_path}: {str(e)}")
-                return f"Error reading Word document: {str(e)}"
+    try:
+        if file_extension == '.docx':
+            doc = Document(file_path)
+            text = []
+
+            # Извлекаем текст из параграфов
+            for paragraph in doc.paragraphs:
+                if paragraph.text.strip():
+                    text.append(paragraph.text)
+
+            # Извлекаем текст из таблиц
+            for table in doc.tables:
+                for row in table.rows:
+                    row_data = [cell.text.strip() for cell in row.cells]
+                    if any(row_data):
+                        text.append('	'.join(row_data))
+
+            return '
+'.join(text)
+        else:
+            return "Preview not available for .doc files. Please download to view."
+    except Exception as e:
+        logger.error(f"Error processing Word document {file_path}: {str(e)}")
+        return f"Error reading Word document: {str(e)}"
         
         # Handle Excel files
         elif file_extension in ['.xls', '.xlsx'] and EXCEL_AVAILABLE:
