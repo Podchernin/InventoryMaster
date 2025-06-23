@@ -119,7 +119,7 @@ def extract_text_from_file(file_path):
         # Handle Word documents
         elif file_extension in ['.doc', '.docx'] and DOCX_AVAILABLE:
             try:
-                if file_extension == '.docx':
+                if file_extension == ['.doc', '.docx']:
                     pdf_path = file_path.rsplit('.', 1)[0] + '.pdf'
                     if not os.path.exists(pdf_path):
                         subprocess.run([
