@@ -122,17 +122,13 @@ def extract_text_from_file(file_path):
                 if file_extension == '.docx':
                     doc = Document(file_path)
                     text = []
-
-# Читаем параграфы
-for paragraph in doc.paragraphs:
-    if paragraph.text.strip():
-        text.append(paragraph.text)
-
-# Читаем таблицы
-for table in doc.tables:
-    for row in table.rows:
-        row_data = [cell.text.strip() for cell in row.cells]
-        text.append('\t'.join(row_data))
+                    for paragraph in doc.paragraphs:
+                         if paragraph.text.strip():
+                              text.append(paragraph.text)
+                     for table in doc.tables:
+                          for row in table.rows:
+                                row_data = [cell.text.strip() for cell in row.cells]
+                                text.append('\t'.join(row_data)) 
                     return '\n'.join(text)
                 else:
                     return "Preview not available for .doc files. Please download to view."
