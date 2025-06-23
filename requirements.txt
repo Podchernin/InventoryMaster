@@ -7,4 +7,3 @@ PyMuPDF
 Pillow
 markdown
 lxml
-libreoffice
