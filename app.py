@@ -3,6 +3,7 @@ import json
 import zipfile
 import mimetypes
 import logging
+import subprocess
 from datetime import datetime
 from pathlib import Path
 from werkzeug.utils import secure_filename
