@@ -29,21 +29,7 @@ try:
 except ImportError:
     EXCEL_AVAILABLE = False
 
-try:
-    from pptx import Presentation
-    PPTX_AVAILABLE = True
-except ImportError:
-    PPTX_AVAILABLE = False
-
-try:
-    from odf.opendocument import load
-    from odf.text import P
-    from odf.teletype import extractText
-    ODF_AVAILABLE = True
-except ImportError:
-    ODF_AVAILABLE = False
-
-# Configure logging
+# Logging setup
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
@@ -53,85 +39,95 @@ CORS(app)
 
 UPLOAD_FOLDER = 'static/uploads'
 MAX_CONTENT_LENGTH = 10 * 1024 * 1024 * 1024  # 10GB
+
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = MAX_CONTENT_LENGTH
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
 ALLOWED_EXTENSIONS = {
     'images': {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp', 'svg', 'ico'},
     'documents': {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods', 'odp'},
+    'videos': {'mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'},
+    'audio': {'mp3', 'wav', 'ogg', 'aac', 'm4a', 'flac'},
+    'archives': {'zip', 'rar', '7z', 'tar', 'gz', 'bz2'}
 }
 
-@app.route("/preview/<path:filename>")
-def preview_file(filename):
-    file_path = os.path.join(UPLOAD_FOLDER, filename)
-    file_extension = Path(filename).suffix.lower()
+def allowed_file(filename):
+    if '.' not in filename:
+        return False
+    ext = filename.rsplit('.', 1)[1].lower()
+    return any(ext in exts for exts in ALLOWED_EXTENSIONS.values())
 
-    if not os.path.exists(file_path):
-        return f"File {filename} not found."
+def get_file_type(filename):
+    ext = filename.rsplit('.', 1)[-1].lower()
+    for type_, exts in ALLOWED_EXTENSIONS.items():
+        if ext in exts:
+            return type_
+    return 'other'
 
+def extract_text_from_file(file_path):
     try:
-        if file_extension == ".txt":
-            with open(file_path, "r", encoding="utf-8") as f:
+        ext = Path(file_path).suffix.lower()
+        if ext == '.txt':
+            with open(file_path, 'r', encoding='utf-8') as f:
                 return f.read()
-
-        elif file_extension == ".pdf" and PDF_AVAILABLE:
+        elif ext == '.pdf' and PDF_AVAILABLE:
             with fitz.open(file_path) as doc:
-                text = ""
-                for page in doc:
-                    text += page.get_text()
-                return text
-
-        elif file_extension in ['.doc', '.docx'] and DOCX_AVAILABLE:
-            try:
-                if file_extension == '.docx':
-                    doc = Document(file_path)
-                    text = []
-
-                    for paragraph in doc.paragraphs:
-                        line = paragraph.text.strip()
-                        if line:
-                            text.append(line)
-
-                    for table in doc.tables:
-                        for row in table.rows:
-                            cells = [cell.text.strip() for cell in row.cells]
-                            if any(cells):
-                                text.append('\t'.join(cells))
-
-                    return '\n'.join(text)
-                else:
-                    return "Preview not available for .doc files. Please download to view."
-            except Exception as e:
-                logger.error(f"Error processing Word document {file_path}: {str(e)}")
-                return f"Error reading Word document: {str(e)}"
-
-        elif file_extension in ['.xls', '.xlsx'] and EXCEL_AVAILABLE:
-            try:
-                if file_extension == '.xlsx':
-                    workbook = openpyxl.load_workbook(file_path)
-                    text = []
-                    for sheet_name in workbook.sheetnames:
-                        sheet = workbook[sheet_name]
-                        text.append(f"=== Sheet: {sheet_name} ===")
-                        for row in sheet.iter_rows(values_only=True):
-                            row_text = '\t'.join([str(cell) if cell is not None else '' for cell in row])
-                            if row_text.strip():
-                                text.append(row_text)
-                    workbook.close()
-                    return '\n'.join(text)
-                else:
-                    return "Legacy .xls support not implemented."
-            except Exception as e:
-                logger.error(f"Error processing Excel file {file_path}: {str(e)}")
-                return f"Error reading Excel document: {str(e)}"
-
-        else:
-            return "Preview not available for this file type."
-
+                return "\n".join([page.get_text() for page in doc])
+        elif ext == '.docx' and DOCX_AVAILABLE:
+            doc = Document(file_path)
+            text = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
+            return '\n'.join(text)
+        elif ext == '.xlsx' and EXCEL_AVAILABLE:
+            wb = openpyxl.load_workbook(file_path)
+            text = []
+            for sheet in wb.worksheets:
+                text.append(f"=== Sheet: {sheet.title} ===")
+                for row in sheet.iter_rows(values_only=True):
+                    text.append('\t'.join([str(cell) if cell else '' for cell in row]))
+            wb.close()
+            return '\n'.join(text)
+        return "Preview not available for this file type."
     except Exception as e:
-        logger.error(f"Unhandled error previewing file {file_path}: {str(e)}")
-        return f"Error previewing file: {str(e)}"
+        logger.error(f"Error extracting text: {str(e)}")
+        return f"Error: {str(e)}"
 
 @app.route("/")
 def index():
-    return "InventoryMaster API is running."
+    return "Unified InventoryMaster API is running."
 
-if __name__ == "__main__":
+@app.route("/upload", methods=['POST'])
+def upload():
+    if 'file' not in request.files:
+        return "No file part", 400
+    file = request.files['file']
+    if file.filename == '' or not allowed_file(file.filename):
+        return "Invalid or missing file", 400
+
+    filename = secure_filename(file.filename)
+    save_path = os.path.join(UPLOAD_FOLDER, filename)
+    counter = 1
+    while os.path.exists(save_path):
+        base, ext = os.path.splitext(filename)
+        filename = f"{base}_{counter}{ext}"
+        save_path = os.path.join(UPLOAD_FOLDER, filename)
+        counter += 1
+
+    file.save(save_path)
+    logger.info(f"Uploaded file saved to {save_path}")
+    return f"File {filename} uploaded successfully."
+
+@app.route("/preview/<path:filename>")
+def preview_file(filename):
+    path = os.path.join(UPLOAD_FOLDER, filename)
+    if not os.path.exists(path):
+        return f"File {filename} not found.", 404
+    return extract_text_from_file(path)
+
+@app.errorhandler(RequestEntityTooLarge)
+def handle_large(e):
+    return "File too large. Max 10GB.", 413
+
+if __name__ == '__main__':
     app.run(debug=True)
