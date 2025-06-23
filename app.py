@@ -121,15 +121,20 @@ def extract_text_from_file(file_path):
             try:
                 if file_extension == '.docx':
                     doc = Document(file_path)
-                    text = []
+                    html = ""
                     for paragraph in doc.paragraphs:
-                        if paragraph.text.strip():
-                            text.append(paragraph.text)
+                        text = paragraph.text.strip()
+                        if text:
+                            html += f"<p>{text}</p>"
                     for table in doc.tables:
+                        html += "<table border='1' cellspacing='0' cellpadding='4'>"
                         for row in table.rows:
-                            row_data = [cell.text.strip() for cell in row.cells]
-                            text.append('\t'.join(row_data))
-                    return '\n'.join(text)
+                            html += "<tr>"
+                            for cell in row.cells:
+                                html += f"<td>{cell.text.strip()}</td>"
+                            html += "</tr>"
+                        html += "</table>"
+                    return html
                 else:
                     return "Preview not available for .doc files. Please download to view."
             except Exception as e:
