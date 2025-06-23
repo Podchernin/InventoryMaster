@@ -129,12 +129,12 @@ def extract_text_from_file(file_path):
                         for row in table.rows:
                             row_data = [cell.text.strip() for cell in row.cells]
                             text.append('\t'.join(row_data))
-                return '\n'.join(text)
-            else:
-                return "Preview not available for .doc files. Please download to view."
-        except Exception as e:
-            logger.error(f"Error processing Word document {file_path}: {str(e)}")
-            return f"Error reading Word document: {str(e)}"
+                    return '\n'.join(text)
+                else:
+                    return "Preview not available for .doc files. Please download to view."
+            except Exception as e:
+                logger.error(f"Error processing Word document {file_path}: {str(e)}")
+                return f"Error reading Word document: {str(e)}"
         
         # Handle Excel files
         elif file_extension in ['.xls', '.xlsx'] and EXCEL_AVAILABLE:
