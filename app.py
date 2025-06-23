@@ -120,26 +120,26 @@ def extract_text_from_file(file_path):
         elif file_extension in ['.doc', '.docx'] and DOCX_AVAILABLE:
             try:
                 if file_extension == '.docx':
-                    doc = Document(file_path)
-                    html = ""
-                    for paragraph in doc.paragraphs:
-                        text = paragraph.text.strip()
-                        if text:
-                            html += f"<p>{text}</p>"
-                    for table in doc.tables:
-                        html += "<table border='1' cellspacing='0' cellpadding='4'>"
-                        for row in table.rows:
-                            html += "<tr>"
-                            for cell in row.cells:
-                                html += f"<td>{cell.text.strip()}</td>"
-                            html += "</tr>"
-                        html += "</table>"
-                    return html
+                    pdf_path = file_path.rsplit('.', 1)[0] + '.pdf'
+                    if not os.path.exists(pdf_path):
+                        subprocess.run([
+                            'libreoffice',
+                            '--headless',
+                            '--convert-to',
+                            'pdf',
+                            '--outdir',
+                            os.path.dirname(file_path),
+                            file_path
+                        ], check=True)
+                    from pathlib import Path
+                    return f'''
+                    <iframe src="/static/uploads/{Path(pdf_path).name}" width="100%" height="800px" style="border:none;"></iframe>
+                    '''
                 else:
-                    return "Preview not available for .doc files. Please download to view."
+                    return "Предпросмотр .doc не поддерживается, только .docx."
             except Exception as e:
-                logger.error(f"Error processing Word document {file_path}: {str(e)}")
-                return f"Error reading Word document: {str(e)}"
+                logger.error(f"Ошибка при обработке DOCX: {e}")
+                return f"Ошибка чтения Word-документа: {e}"
         
         # Handle Excel files
         elif file_extension in ['.xls', '.xlsx'] and EXCEL_AVAILABLE:
