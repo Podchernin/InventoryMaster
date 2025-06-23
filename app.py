@@ -123,17 +123,18 @@ def extract_text_from_file(file_path):
             doc = Document(file_path)
             text = []
 
-            # Извлекаем текст из параграфов
+            # Чтение параграфов
             for paragraph in doc.paragraphs:
-                if paragraph.text.strip():
-                    text.append(paragraph.text)
+                line = paragraph.text.strip()
+                if line:
+                    text.append(line)
 
-            # Извлекаем текст из таблиц
+            # Чтение таблиц
             for table in doc.tables:
                 for row in table.rows:
-                    row_data = [cell.text.strip() for cell in row.cells]
-                    if any(row_data):
-                        text.append('	'.join(row_data))
+                    cells = [cell.text.strip() for cell in row.cells]
+                    if any(cells):
+                        text.append('	'.join(cells))
 
             return '
 '.join(text)
@@ -783,4 +784,3 @@ def delete_file(file_path):
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
-
